@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = [
   'https://spectrix.netlify.app',
+  'https://spectrix-ai.vercel.app',
   'https://spectrix-ultra.netlify.app',
   'https://taezeem.is-a.dev',
   'http://127.0.0.1:5500',
@@ -8,8 +9,7 @@ const ALLOWED_ORIGINS = [
 
 const OPENROUTER_KEY_ENV_NAMES = [
   'WORKER_OPENROUTER_KEY',
-  'WORKER_OPENROUTER_KEY_2',
-  'WORKER_OPENROUTER_KEY_3'
+  'WORKER_OPENROUTER_KEY_2'
 ];
 
 const LEADERBOARD_KV_KEY = 'SPECTRIX_LEADERBOARD_GLOBAL';
