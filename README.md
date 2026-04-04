@@ -32,7 +32,7 @@
 | Link | Description |
 |------|-------------|
 | 🚀 [spectrix-ai.vercel.app](https://spectrix-ai.vercel.app) | Primary deployment |
-| 🌍 [taezeem.is-a.dev/spectrix-vercel](https://taezeem.is-a.dev/spectrix-vercel) | Custom domain mirror |
+| 🌍 [taezeem.is-a.dev/spectrix-vercel](https://taezeem.is-a.dev/Spectrix-Vercel) | Custom domain mirror |
 
 > ⚡ Local-first by default. Sign in with Google to unlock cloud backup + real-time multi-device sync.
 
