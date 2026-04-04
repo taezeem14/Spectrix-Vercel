@@ -31,7 +31,7 @@
 
 | Link | Description |
 |------|-------------|
-| 🚀 [spectrix.netlify.app](https://spectrix.netlify.app) | Primary deployment |
+| 🚀 [spectrix-ai.vercel.app](https://spectrix-ai.vercel.app) | Primary deployment |
 | 🌍 [taezeem.is-a.dev/spectrix](https://taezeem.is-a.dev/spectrix) | Custom domain mirror |
 
 > ⚡ Local-first by default. Sign in with Google to unlock cloud backup + real-time multi-device sync.
