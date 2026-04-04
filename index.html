@@ -26,11 +26,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js"
-		onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '\\(', right: '\\)', display: false},{left: '$', right: '$', display: false}], throwOnError: false, strict: 'ignore'});"></script>
 <script>
 window.MathJax = {
   tex: {
@@ -46,7 +41,6 @@ window.MathJax = {
   }
 };
 </script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap');
@@ -2783,19 +2777,98 @@ function speakText(text) {
 }
 
 // ===== MATH RENDERING =====
-function renderMath(d) {
+const MATH_RENDER_DELIMITERS = [
+  { left: "$$", right: "$$", display: true },
+  { left: "\\(", right: "\\)", display: false },
+  { left: "$", right: "$", display: false }
+];
+const KATEX_CSS_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css';
+const KATEX_JS_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js';
+const KATEX_AUTORENDER_JS_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js';
+const MATHJAX_JS_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+let mathEngineLoadPromise = null;
+
+function hasMathSyntax(text) {
+  return /(\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]|\$[^$\n]+\$)/.test(text);
+}
+
+function ensureStylesheetLoaded(href) {
+  const existing = document.querySelector(`link[rel="stylesheet"][href="${href}"]`);
+  if (existing) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => resolve();
+    link.onerror = () => reject(new Error(`Failed to load stylesheet: ${href}`));
+    document.head.appendChild(link);
+  });
+}
+
+function ensureScriptLoaded(src) {
+  const existing = document.querySelector(`script[src="${src}"]`);
+  if (existing) {
+    if (existing.dataset.loaded === 'true') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    script.onload = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureMathEnginesLoaded() {
+  if (window.renderMathInElement && window.MathJax?.typesetPromise) return;
+  if (mathEngineLoadPromise) {
+    await mathEngineLoadPromise;
+    return;
+  }
+
+  mathEngineLoadPromise = (async () => {
+    await ensureStylesheetLoaded(KATEX_CSS_URL);
+    await ensureScriptLoaded(KATEX_JS_URL);
+    await ensureScriptLoaded(KATEX_AUTORENDER_JS_URL);
+    await ensureScriptLoaded(MATHJAX_JS_URL);
+    if (window.MathJax?.startup?.promise) {
+      await window.MathJax.startup.promise;
+    }
+  })();
+
+  try {
+    await mathEngineLoadPromise;
+  } finally {
+    mathEngineLoadPromise = null;
+  }
+}
+
+async function renderMath(d) {
   if (!d || !d.textContent) return;
-  const hasMath = /(\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]|\$[^$\n]+\$)/.test(d.textContent);
+  const hasMath = hasMathSyntax(d.textContent);
   if (!hasMath) return;
+
+  try {
+    await ensureMathEnginesLoaded();
+  } catch (error) {
+    console.warn('Math engine lazy-load warning:', error);
+    return;
+  }
 
   if (window.renderMathInElement) {
     try {
       renderMathInElement(d, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "\\(", right: "\\)", display: false },
-          { left: "$", right: "$", display: false }
-        ],
+        delimiters: MATH_RENDER_DELIMITERS,
         throwOnError: false,
         strict: "ignore"
       });
@@ -3869,7 +3942,9 @@ async function streamBotFromSSE(payload) {
 
   const d = document.createElement("div");
   d.className = "msg bot";
-  let appended = false;
+  d.innerHTML = '<span class="muted">Thinking...</span>';
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
 
   const session = getCurrentSession();
   if (!session) throw new Error("No active chat session");
@@ -3877,6 +3952,7 @@ async function streamBotFromSSE(payload) {
   let renderedText = "";
   let buffer = "";
   let streamDone = false;
+  let frameScheduled = false;
 
   const decoder = new TextDecoder();
   const reader = res.body.getReader();
@@ -3888,8 +3964,16 @@ async function streamBotFromSSE(payload) {
     } else {
       d.textContent = renderedText;
     }
-    renderMath(d);
     chat.scrollTop = chat.scrollHeight;
+  };
+
+  const scheduleRender = () => {
+    if (frameScheduled) return;
+    frameScheduled = true;
+    requestAnimationFrame(() => {
+      frameScheduled = false;
+      renderCurrentState();
+    });
   };
 
   while (!streamDone) {
@@ -3929,14 +4013,10 @@ async function streamBotFromSSE(payload) {
             throw new Error(eventData.message || "Streaming failed");
           }
 
-if (eventData?.type === "delta" && typeof eventData.delta === "string") {
-    renderedText += eventData.delta;
-    if (!appended) {
-        chat.appendChild(d);
-        appended = true;
-    }
-    renderCurrentState();
-}
+          if (eventData?.type === "delta" && typeof eventData.delta === "string") {
+            renderedText += eventData.delta;
+            scheduleRender();
+          }
 
           if (eventData?.type === "done") {
             streamDone = true;
@@ -3952,6 +4032,9 @@ if (eventData?.type === "delta" && typeof eventData.delta === "string") {
   if (!renderedText.trim()) {
     throw new Error("Empty response from model");
   }
+
+  renderCurrentState();
+  await renderMath(d);
 
   setTimeout(() => decorateCodeBlocks(d), 80);
 
