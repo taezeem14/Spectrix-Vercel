@@ -2,7 +2,7 @@ const ALLOWED_ORIGINS = [
   'https://spectrix.netlify.app',
   'https://spectrix-ai.vercel.app',
   'https://spectrix-ultra.netlify.app',
-  'https://taezeem.is-a.dev',
+  'https://taezeem.is-a.dev/Spectrix-Vercel',
   'http://127.0.0.1:5500',
   'http://localhost:5500'
 ];
