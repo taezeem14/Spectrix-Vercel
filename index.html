@@ -4183,15 +4183,6 @@ async function send(options = {}) {
     return;
   }
 
-if (ttsEnabled && 'speechSynthesis' in window) {
-    // Speak physical character 'a' at 1% volume. Mobile browsers won't skip it.
-    const u = new SpeechSynthesisUtterance('a');
-    u.volume = 0.01;
-    u.rate = 10;
-    window.speechSynthesis.speak(u);
-    if (window.speechSynthesis.state === 'paused') window.speechSynthesis.resume();
-  }
-
   let prompt = String(promptOverride ?? input.value).trim();
   if (!prompt) return;
   if (prompt.length > MAX_PROMPT_CHARS) {
@@ -4223,6 +4214,17 @@ if (ttsEnabled && 'speechSynthesis' in window) {
 
   if (!skipUserRender) {
     render("user", prompt);
+    // Yield one frame so the user bubble paints immediately.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+
+  if (ttsEnabled && 'speechSynthesis' in window) {
+    // Warm up TTS after UI paint so speech setup never delays first bubble render.
+    const u = new SpeechSynthesisUtterance('a');
+    u.volume = 0.01;
+    u.rate = 10;
+    window.speechSynthesis.speak(u);
+    if (window.speechSynthesis.state === 'paused') window.speechSynthesis.resume();
   }
 
   const loading = document.createElement("div");
