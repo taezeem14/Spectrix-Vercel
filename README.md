@@ -32,7 +32,7 @@
 | Link | Description |
 |------|-------------|
 | 🚀 [spectrix-ai.vercel.app](https://spectrix-ai.vercel.app) | Primary deployment |
-| 🌍 [taezeem.is-a.dev/spectrix-vercel](https://taezeem.is-a.dev/Spectrix-Vercel) | Custom domain mirror |
+| 🌍 [taezeem.is-a.dev/spectrix](https://taezeem.is-a.dev/spectrix) | Custom domain mirror |
 
 > ⚡ Local-first by default. Sign in with Google to unlock cloud backup + real-time multi-device sync.
 
@@ -94,7 +94,8 @@ Built from scratch — **zero frameworks, zero bloat** — it combines:
 - **Toggle on/off** — disable auto-learning anytime
 - **Cooldown-throttled** — extraction runs max once every 5 minutes, no spam
 - **Deduplication** — near-identical facts are never saved twice
-- **IndexedDB-powered** — 100% local, private, zero server dependency
+- **Local-first IndexedDB** — fast on-device memory persistence
+- **Firestore memory sync** — auto-mirrors memories across signed-in devices
 
 ### 🎤 Voice & Interaction
 - **Voice input** via Web Speech API — tap 🎤, speak, done
@@ -140,7 +141,7 @@ Built from scratch — **zero frameworks, zero bloat** — it combines:
 
 ### ☁️ Google Auth + Cloud Sync
 - **Google Sign-In** via Firebase Auth (popup with redirect fallback)
-- **Real-time Firestore sync** — chats auto-mirror create/update/delete when logged in
+- **Real-time Firestore sync** — chats and memories auto-mirror create/update/delete when logged in
 - **Fallback timer sync** — polls cloud every 30s if realtime listener is blocked
 - **Tombstone system** — deleted chats stay deleted across devices, no resurrection
 - **Profile control hub** — backup, edit name/photo, upload device picture, or sign out
@@ -161,7 +162,11 @@ User sends message
           ├── Analyzes conversation for memorable user facts
           ├── Deduplicates against existing memories (80% word-overlap check)
           ├── Categorizes: personal / preference / technical / interest / context
-          └── Saves to IndexedDB → 'memories' store
+          └── Saves to IndexedDB → 'memories' store (local-first)
+                │
+                ├── If signed in + not incognito:
+                │     Mirrors to Firestore users/{uid}/memories
+                │     and listens for real-time updates from other devices
                 │
                 └── Every future conversation
                       │
@@ -169,7 +174,7 @@ User sends message
                             → AI uses context naturally, without repeating it back
 ```
 
-> 🔒 All memories stored **locally in your browser**. Nothing leaves your device unless you're syncing chats — and even then, memories never go to the cloud.
+> 🔒 Memories are **local-first** in IndexedDB and sync to Firestore only when signed in (disabled in incognito).
 
 ---
 
@@ -199,7 +204,7 @@ User Browser
     │     ├── KaTeX + MathJax        → Dual-engine math rendering
     │     ├── Firebase Auth          → Google Sign-In
     |     ├── Image/Video model endpoints → Puter.js
-    │     └── Firebase Firestore     → Cloud chat backup + real-time sync
+      │     └── Firebase Firestore     → Cloud chat + memory backup + real-time sync
     │
     └── Vercel Functions (`/api/*` + rewrites)
           ├── `/chat`           → OpenRouter JSON completion
@@ -264,7 +269,7 @@ If KV is not set, leaderboard falls back to in-memory storage in the running fun
 |-------|------|
 | Frontend | HTML, CSS, Vanilla JavaScript |
 | Local Storage | IndexedDB (chats + memories + media) |
-| Cloud Sync | Firebase Firestore |
+| Cloud Sync | Firebase Firestore (chats + memories) |
 | Auth | Firebase Auth (Google Sign-In) |
 | PWA | Service Workers + Web App Manifest |
 | Voice | Web Speech API (STT + TTS) |
@@ -318,7 +323,7 @@ Idea  →  AI generates core logic
 ## 🗺️ Roadmap
 
 - [ ] Folder/tag-based chat organization
-- [ ] Cloud memory sync (opt-in)
+- [x] Cloud memory sync across signed-in devices
 - [ ] Custom system prompt editor
 - [ ] Multi-file upload support
 - [ ] Conversation branching
