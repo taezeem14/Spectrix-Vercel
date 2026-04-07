@@ -10,7 +10,9 @@ const ALLOWED_ORIGINS = [
 const OPENROUTER_KEY_ENV_NAMES = [
   'WORKER_OPENROUTER_KEY',
   'WORKER_OPENROUTER_KEY_2',
-  'WORKER_OPENROUTER_KEY_3'
+  'WORKER_OPENROUTER_KEY_3',
+  'WORKER_OPENROUTER_KEY_4',
+  'WORKER_OPENROUTER_KEY_5'
 ];
 
 const LEADERBOARD_KV_KEY = 'SPECTRIX_LEADERBOARD_GLOBAL';
@@ -148,7 +150,7 @@ async function openRouterRequest(payload, { stream = false } = {}) {
     throw new Error('OpenRouter API keys not configured');
   }
 
-  const maxRetries = 3;
+  const maxRetries = Math.min(Math.max(keys.length, 3), 5);
   let lastResponse = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -178,6 +180,47 @@ function parseRetryAfter(response) {
   const retryAfter = response.headers.get('retry-after');
   const asNumber = retryAfter ? Number.parseInt(retryAfter, 10) : NaN;
   return Number.isFinite(asNumber) ? asNumber : 30;
+}
+
+async function buildRateLimitPayload(response) {
+  let retryAfter = parseRetryAfter(response);
+  let providerMessage = '';
+  let upstreamCode = 429;
+
+  try {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await response.clone().json();
+      providerMessage = String(body?.error?.message || body?.message || '').trim();
+
+      const parsedCode = Number.parseInt(String(body?.error?.code ?? body?.code ?? ''), 10);
+      if (Number.isFinite(parsedCode)) upstreamCode = parsedCode;
+
+      const parsedRetryAfter = Number.parseInt(String(body?.retryAfter ?? body?.retry_after ?? ''), 10);
+      if (Number.isFinite(parsedRetryAfter) && parsedRetryAfter > 0) {
+        retryAfter = parsedRetryAfter;
+      }
+    } else {
+      const raw = String(await response.clone().text() || '').trim();
+      if (raw) providerMessage = raw.slice(0, 260);
+    }
+  } catch {}
+
+  const message = providerMessage || 'Rate limited by AI provider. Please wait a moment and try again.';
+  const payload = {
+    error: {
+      message,
+      code: 429,
+      upstreamCode
+    },
+    retryAfter
+  };
+
+  if (providerMessage) {
+    payload.providerMessage = providerMessage;
+  }
+
+  return payload;
 }
 
 function buildOpenRouterPayload(body) {
@@ -227,13 +270,7 @@ async function handleChatJson(req, res) {
     const upstream = await openRouterRequest(payload, { stream: false });
 
     if (upstream.status === 429) {
-      return sendJson(req, res, 429, {
-        error: {
-          message: 'Rate limited by AI provider. Please wait a moment and try again.',
-          code: 429
-        },
-        retryAfter: parseRetryAfter(upstream)
-      });
+      return sendJson(req, res, 429, await buildRateLimitPayload(upstream));
     }
 
     if (!upstream.ok) {
@@ -291,13 +328,7 @@ async function handleChatStream(req, res) {
     const upstream = await openRouterRequest(payload, { stream: true });
 
     if (upstream.status === 429) {
-      return sendJson(req, res, 429, {
-        error: {
-          message: 'Rate limited by AI provider. Please wait a moment and try again.',
-          code: 429
-        },
-        retryAfter: parseRetryAfter(upstream)
-      });
+      return sendJson(req, res, 429, await buildRateLimitPayload(upstream));
     }
 
     if (!upstream.ok) {
