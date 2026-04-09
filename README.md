@@ -38,6 +38,13 @@
 
 ---
 
+## 📝 Documentation Promise
+
+- README is updated with every shipped feature and major behavior change.
+- Vercel and Cloudflare variants stay documented in parity.
+
+---
+
 ## 🔥 What is Spectrix AI?
 
 **Spectrix AI** is a high-performance, PWA-first AI chatbot engineered for students, developers, and power users.
@@ -114,6 +121,12 @@ Built from scratch — **zero frameworks, zero bloat** — it combines:
 - **Copy LaTeX button** — hover any math block to copy the raw TeX
 - **Code blocks** — syntax highlighting via Highlight.js, copy button, collapse toggle
 - **Markdown** — full support: tables, blockquotes, headings, bold, italic, lists, images
+
+### 📎 Multi-file Context
+- **Multi-file attachments** in chat input (up to 8 files)
+- **Text extraction** from plain/code files, PDF, and DOCX
+- **Image OCR extraction** via Tesseract.js (client-side, lazy-loaded)
+- **Safe truncation caps** for per-file and total extracted context
 
 ### 🖼️ Media Generation
 - `/img <prompt>` — generates images using your selected model:
@@ -276,6 +289,7 @@ If KV is not set, leaderboard falls back to in-memory storage in the running fun
 | Math | KaTeX + MathJax (dual-engine) |
 | Markdown | Marked.js (with custom math extension) |
 | Code | Highlight.js |
+| Attachment Parsing | PDF.js + Mammoth + Tesseract.js (OCR) |
 | Backend | Vercel Functions (Node serverless + SSE) |
 | AI Routing | OpenRouter |
 | Web Search | Firecrawl (via OpenRouter plugins) |
@@ -325,7 +339,7 @@ Idea  →  AI generates core logic
 - [ ] Folder/tag-based chat organization
 - [x] Cloud memory sync across signed-in devices
 - [ ] Custom system prompt editor
-- [ ] Multi-file upload support
+- [x] Multi-file upload support
 - [ ] Conversation branching
 
 ---
