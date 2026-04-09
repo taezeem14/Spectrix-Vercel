@@ -32,7 +32,7 @@
 | Link | Description |
 |------|-------------|
 | 🚀 [spectrix-ai.vercel.app](https://spectrix-ai.vercel.app) | Primary deployment |
-| 🌍 [taezeem.is-a.dev/Spectrix-vercel](https://taezeem.is-a.dev/Spectrix-vercel) | Custom domain mirror |
+| 🌍 [taezeem.is-a.dev/spectrix](https://taezeem.is-a.dev/spectrix) | Custom domain mirror |
 
 > ⚡ Local-first by default. Sign in with Google to unlock cloud backup + real-time multi-device sync.
 
@@ -50,7 +50,7 @@
 **Spectrix AI** is a high-performance, PWA-first AI chatbot engineered for students, developers, and power users.
 
 Built from scratch — **zero frameworks, zero bloat** — it combines:
-- 🤖 Multi-model AI routing via **OpenRouter** (Stepfun, Qwen, Nemotron, and more)
+- 🤖 Multi-model AI routing via **OpenRouter** (GPT-OSS 120B, MiniMax M2.5, Nemotron 3 Super)
 - ⚡ Serverless backend on **Vercel Functions** with smart key rotation + route rewrites
 - 🧮 **Full LaTeX math rendering** via KaTeX + MathJax with copy-to-clipboard
 - 📡 **Offline-first** architecture with IndexedDB local persistence
@@ -195,9 +195,9 @@ User sends message
 
 | Mode | Model | Best For |
 |------|-------|----------|
-| ⚡ Quick | `stepfun/step-3.5-flash:free` | Everyday use, fast replies |
-| 🚀 Smart | `qwen/qwen3.6-plus:free` | Frontend dev, agentic tasks, fast + smart |
-| 🧠 Reasoning | `nvidia/nemotron-3-super-120b-a12b:free` | Deep reasoning, hard problems (slower) |
+| ⚡ Quick | `openai/gpt-oss-120b:free` | Fast chats, tools, and agent loops |
+| 🚀 Smart | `minimax/minimax-m2.5:free` | Coding and productivity workflows |
+| 🧠 Reasoning | `nvidia/nemotron-3-super-120b-a12b:free` | Deep reasoning and long-context tasks |
 
 > 💾 Model preference saved to `localStorage → Spectrix_text_model` and persists across sessions.
 

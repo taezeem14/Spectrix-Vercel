@@ -2487,9 +2487,9 @@ body.dark .voice-btn.recording {
         </div>
           <div class="select-wrap">
             <select id="textModelSelect" title="Choose text model">
-              <option value="stepfun/step-3.5-flash:free">Stepfun 3.5 Flash (Quick • Smart • Often Rate-Limited)</option>
-			  <option value="qwen/qwen3.6-plus:free">Qwen 3.6 Plus (Fast • Smart)</option>
-              <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super (Reasoning • Slow)</option>
+			  <option value="openai/gpt-oss-120b:free">GPT-OSS 120B (Fast • Strong)</option>
+			  <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (Balanced • Productivity)</option>
+              <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super (Deep Reasoning)</option>
             </select>
           </div>
       </div>
@@ -3455,7 +3455,26 @@ async function fetchChatApiWithFallback(options = {}, retryCount = 1) {
 
   throw lastError || new Error('Chat request failed');
 }
-let FIXED_TEXT_MODEL = localStorage.getItem('Spectrix_text_model') || "stepfun/step-3.5-flash:free";
+const DEFAULT_TEXT_MODEL = "openai/gpt-oss-120b:free";
+const ALLOWED_TEXT_MODELS = new Set([
+  DEFAULT_TEXT_MODEL,
+  "minimax/minimax-m2.5:free",
+  "nvidia/nemotron-3-super-120b-a12b:free"
+]);
+const DEPRECATED_TEXT_MODELS = new Set([
+  "stepfun/step-3.5-flash:free",
+  "qwen/qwen3.6-plus:free",
+  "z-ai/glm-4.5-air:free"
+]);
+
+function normalizeTextModelId(modelId) {
+  const candidate = String(modelId || '').trim();
+  if (!candidate) return DEFAULT_TEXT_MODEL;
+  if (DEPRECATED_TEXT_MODELS.has(candidate)) return DEFAULT_TEXT_MODEL;
+  return ALLOWED_TEXT_MODELS.has(candidate) ? candidate : DEFAULT_TEXT_MODEL;
+}
+
+let FIXED_TEXT_MODEL = normalizeTextModelId(localStorage.getItem('Spectrix_text_model'));
 const FIXED_VIDEO_MODEL = "ByteDance/Seedance-1.0-lite";
 const FIXED_MEMORY_TITLE_MODEL = "liquid/lfm-2.5-1.2b-instruct:free";
 
@@ -6794,18 +6813,20 @@ function initTextModelDropdown() {
   if (!sel) return;
   // Set initial value from persisted setting or current variable
   const persisted = localStorage.getItem('Spectrix_text_model');
-  if (persisted) {
-    FIXED_TEXT_MODEL = persisted;
+  FIXED_TEXT_MODEL = normalizeTextModelId(persisted || FIXED_TEXT_MODEL);
+  if (persisted !== FIXED_TEXT_MODEL) {
+    localStorage.setItem('Spectrix_text_model', FIXED_TEXT_MODEL);
   }
   // Ensure the select reflects the active model
-  sel.value = FIXED_TEXT_MODEL || sel.value;
+  sel.value = FIXED_TEXT_MODEL;
 
   sel.addEventListener('change', (e) => {
-    const v = e.target.value;
-    FIXED_TEXT_MODEL = v;
-    localStorage.setItem('Spectrix_text_model', v);
+    const nextModel = normalizeTextModelId(e.target.value);
+    FIXED_TEXT_MODEL = nextModel;
+    sel.value = nextModel;
+    localStorage.setItem('Spectrix_text_model', nextModel);
     // Optional: notify user briefly
-    console.log('Text model set to', v);
+    console.log('Text model set to', nextModel);
   });
 }
 
