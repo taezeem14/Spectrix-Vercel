@@ -229,7 +229,7 @@ function buildOpenRouterPayload(body) {
     throw new Error('No messages provided');
   }
 
-  const selectedModel = model || 'nvidia/nemotron-3-super-120b-a12b:free';
+  const selectedModel = model || 'openai/gpt-oss-120b:free';
   const finalMessages = mergeSystemPrompt(messages);
   const maxTokens = getMaxTokensForModel(selectedModel);
   const isDeepseek = selectedModel.includes('deepseek');

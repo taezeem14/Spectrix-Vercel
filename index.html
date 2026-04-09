@@ -2903,8 +2903,8 @@ const ATTACHMENT_TEXT_EXTENSIONS = new Set([
   'ps1', 'bat', 'c', 'cpp', 'h', 'hpp', 'cs', 'ini', 'toml', 'env', 'log'
 ]);
 const ATTACHMENT_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff']);
-const MEMORY_EXTRACT_MIN_CHARS = 100;
-const MEMORY_EXTRACT_COOLDOWN_MS = 5 * 60 * 1000;
+const MEMORY_EXTRACT_MIN_CHARS = 24;
+const MEMORY_EXTRACT_COOLDOWN_MS = 90 * 1000;
 const MATH_FORMAT_SYSTEM_PROMPT = `
 When writing mathematics, use valid MathJax / KaTeX LaTeX syntax.
 
@@ -3579,9 +3579,7 @@ async function fetchChatApiWithFallback(options = {}, retryCount = 1) {
 }
 const DEFAULT_TEXT_MODEL = "openai/gpt-oss-120b:free";
 const ALLOWED_TEXT_MODELS = new Set([
-  DEFAULT_TEXT_MODEL,
-  "minimax/minimax-m2.5:free",
-  "nvidia/nemotron-3-super-120b-a12b:free"
+  DEFAULT_TEXT_MODEL
 ]);
 const DEPRECATED_TEXT_MODELS = new Set([
   "stepfun/step-3.5-flash:free",
@@ -3599,7 +3597,7 @@ function normalizeTextModelId(modelId) {
 let FIXED_TEXT_MODEL = normalizeTextModelId(localStorage.getItem('Spectrix_text_model'));
 const FIXED_VIDEO_MODEL = "ByteDance/Seedance-1.0-lite";
 const FIXED_TITLE_MODEL = "openai/gpt-oss-120b:free";
-const FIXED_MEMORY_EXTRACT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+const FIXED_MEMORY_EXTRACT_MODEL = "openai/gpt-oss-120b:free";
 
 let sessions = {};
 let currentId = localStorage.getItem(CURRENT_KEY) || null;
@@ -6904,21 +6902,51 @@ ${existingFacts.slice(0, 20).join('\n')}`
     });
 
     const data = await res.json();
-    const rawOutput = data?.choices?.[0]?.message?.content?.trim();
+    const rawOutput = String(data?.choices?.[0]?.message?.content || '').trim();
+    const normalizedOutput = rawOutput
+      .replace(/```(?:text|txt|md|markdown|json)?/gi, '')
+      .replace(/```/g, '')
+      .trim();
 
-    if (!rawOutput || rawOutput.toUpperCase() === 'NONE') return;
+    if (!normalizedOutput || /^none[.!\s]*$/i.test(normalizedOutput)) return;
 
-    const lines = rawOutput.split('\n').filter(l => l.includes('|'));
+    const parsedFacts = [];
+    const lines = normalizedOutput.split('\n').map(line => line.trim()).filter(Boolean);
+    for (const rawLine of lines) {
+      const line = rawLine
+        .replace(/^[-*•]\s*/, '')
+        .replace(/^\d+[.)]\s*/, '')
+        .replace(/`/g, '')
+        .trim();
+      if (!line) continue;
+
+      let categoryPart = '';
+      let factPart = '';
+
+      if (line.includes('|')) {
+        const parts = line.split('|');
+        categoryPart = String(parts.shift() || '').trim();
+        factPart = parts.join('|').trim();
+      } else {
+        const match = line.match(/^(personal|preference|technical|interest|context|general)\s*[:\-]\s*(.+)$/i);
+        if (match) {
+          categoryPart = match[1];
+          factPart = match[2];
+        }
+      }
+
+      if (!factPart) continue;
+      parsedFacts.push({ categoryPart, fact: factPart });
+    }
+
+    if (!parsedFacts.length) return;
+
     let saved = 0;
 
-    for (const line of lines) {
-      const parts = line.split('|').map(s => s.trim());
-      if (parts.length < 2) continue;
-
-      // FIX 2: properly validate category
-      const rawCat = parts[0].toLowerCase().replace(/[^a-z]/g, '');
+    for (const entry of parsedFacts) {
+      const rawCat = String(entry.categoryPart || '').toLowerCase().replace(/[^a-z]/g, '');
       const category = MEMORY_CATEGORIES[rawCat] ? rawCat : 'general';
-      const fact = parts[1];
+      const fact = String(entry.fact || '').trim();
 
       if (!fact || fact.length < 4 || fact.length > 200) continue;
 
